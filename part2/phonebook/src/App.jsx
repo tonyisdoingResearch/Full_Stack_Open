@@ -1,80 +1,85 @@
-import React, { useState, useEffect } from 'react'; // Importa React e le funzioni useState e useEffect
+import React, { useState, useEffect } from 'react'; // Import React and the useState and useEffect functions
 import { getAll, create, deletePerson, updateNumber } from './persons.js';
 
-// Componente per filtrare i risultati
+// Component for filtering results
 const Filter = ({ value, onChange }) => (
   <div>
-    filter shown with <input value={value} onChange={onChange} /> {/* Input per il filtraggio */}
+    {/* Input for filtering */}
+    filter shown with <input value={value} onChange={onChange} />
   </div>
 );
 
-// Componente per il modulo di inserimento di una nuova persona
+// Component for the form to add a new person
 const PersonForm = ({ onSubmit, name, onNameChange, number, onNumberChange }) => (
   <form onSubmit={onSubmit}>
     <div>
-      name: <input value={name} onChange={onNameChange} /> {/* Input per il nome */}
+      {/* Input for the name */}
+      name: <input value={name} onChange={onNameChange} />
     </div>
     <div>
-      number: <input value={number} onChange={onNumberChange} /> {/* Input per il numero */}
+      {/* Input for the number */}
+      number: <input value={number} onChange={onNumberChange} />
     </div>
     <div>
-      <button type="submit">add</button> {/* Pulsante per aggiungere una persona */}
+      {/* Button to add a person */}
+      <button type="submit">add</button>
     </div>
   </form>
 );
 
-// Componente per visualizzare l'elenco delle persone
+// Component to display the list of persons
 const Persons = ({ persons, nameStyle, handleDelete }) => (
   persons.map((person, index) => 
     <p style={nameStyle} key={index}>
+      {/* Display name and number */}
       {person.name} {person.number},
+      {/* Button to delete */}
       <button onClick={() => handleDelete(person.id)}>Delete</button>
     </p>
   )
 );
-// Componente principale dell'applicazione
+// Main component of the application
 const App = () => {
-  // Definizione degli stati utilizzati nell'applicazione
-  const [persons, setPersons] = useState([]); // Stato per l'elenco delle persone
-  const [newName, setNewName] = useState(''); // Stato per il nuovo nome
-  const [newNumber, setNewNumber] = useState(''); // Stato per il nuovo numero
-  const [search, setSearch] = useState(''); // Stato per la stringa di ricerca
+  // States used in the application
+  const [persons, setPersons] = useState([]); // State for the list of persons
+  const [newName, setNewName] = useState(''); // State for the new name
+  const [newNumber, setNewNumber] = useState(''); // State for the new number
+  const [search, setSearch] = useState(''); // State for the search string
 
-  // Caricamento dei dati iniziali della rubrica
+  // Loading initial phonebook data
   useEffect(() => {
     getAll().then(initialPersons => {
-      setPersons(initialPersons); // Aggiorna lo stato delle persone con i dati iniziali
+      // Update state with initial data
+      setPersons(initialPersons);
     })
-  }, []); // La dipendenza vuota indica che questa operazione viene eseguita solo una volta, all'avvio dell'applicazione
+  }, []);
 
-
-
-  // Gestione del cambiamento del nome nell'input
+  // Handling name input change
   const handleNameChange = (event) => {
-    setNewName(event.target.value); // Aggiorna lo stato del nuovo nome con il valore dell'input
+    // Update state with input value
+    setNewName(event.target.value);
   };
 
-  // Gestione del cambiamento del numero nell'input
+  // Handling number input change
   const handleNumberChange = (event) => {
-    setNewNumber(event.target.value); // Aggiorna lo stato del nuovo numero con il valore dell'input
+    // Update state with input value
+    setNewNumber(event.target.value);
   };
 
-  // Gestione del cambiamento della stringa di ricerca
+  // Handling search string change
   const handleSearchChange = (event) => {
-    setSearch(event.target.value); // Aggiorna lo stato della stringa di ricerca con il valore dell'input
+    // Update state with input value
+    setSearch(event.target.value);
   };
 
-
-
-  
+  // Adding a new person
   const addName = (event) => {
     event.preventDefault();
     const existingPerson = persons.find(p => p.name === newName);
     if (existingPerson) {
       if (window.confirm(`${newName} is already added to the phonebook. Replace the old number with a new one?`)) {
         const updatedPersons = persons.map(p => p.name === newName ? { ...p, number: newNumber } : p);
-      updateNumber(existingPerson.id, newNumber, setPersons, updatedPersons);
-        
+        updateNumber(existingPerson.id, newNumber, setPersons, updatedPersons);
       }
     } else {
       const personObject = {
@@ -85,14 +90,15 @@ const App = () => {
     }
   };
   
-  // Filtra le persone in base alla stringa di ricerca
+  // Filtering persons based on search string
   const filteredPersons = persons.filter(person => person.name.toLowerCase().includes(search.toLowerCase()));
 
-  // Stile per il nome delle persone
+  // Style for person names
   const nameStyle = {
-    lineHeight: '0.3' // Modifica lo stile per il nome delle persone
+    lineHeight: '0.3' // Modify style for person names
   };
 
+  // Handling person deletion
   const handleDelete = (id) => {
     const person = persons.find(p => p.id === id);
     if (window.confirm(`Delete ${person.name}?`)) {
@@ -103,26 +109,27 @@ const App = () => {
         });
     }
   };
-  
 
-
-  // Renderizza l'interfaccia utente
-return (
-  <div>
-    <h2>Phonebook</h2>
-    <Filter value={search} onChange={handleSearchChange} />
-    <h3>Add a new</h3>
-    <PersonForm
-      onSubmit={addName}
-      name={newName}
-      onNameChange={handleNameChange}
-      number={newNumber}
-      onNumberChange={handleNumberChange}
-    />
-    <h3>Numbers</h3>
-    <Persons persons={filteredPersons} nameStyle={nameStyle} handleDelete={handleDelete} />
-  </div>
-);
+  // Rendering the user interface
+  return (
+    <div>
+      <h2>Phonebook</h2>
+      {/* Filter component */}
+      <Filter value={search} onChange={handleSearchChange} />
+      <h3>Add a new</h3>
+      {/* PersonForm component */}
+      <PersonForm
+        onSubmit={addName}
+        name={newName}
+        onNameChange={handleNameChange}
+        number={newNumber}
+        onNumberChange={handleNumberChange}
+      />
+      <h3>Numbers</h3>
+      {/* Persons component */}
+      <Persons persons={filteredPersons} nameStyle={nameStyle} handleDelete={handleDelete} />
+    </div>
+  );
 };
 
-export default App; // Esporta il componente principale dell'applicazione
+export default App; // Export the main component of the application
