@@ -1,135 +1,145 @@
-import React, { useState, useEffect } from 'react'; // Import React and the useState and useEffect functions
-import { getAll, create, deletePerson, updateNumber } from './persons.js';
+import React, { useState, useEffect } from 'react';
+import './App.css';
+import AxiosThings from './AxiosThings';
 
-// Component for filtering results
-const Filter = ({ value, onChange }) => (
-  <div>
-    {/* Input for filtering */}
-    filter shown with <input value={value} onChange={onChange} />
-  </div>
+const Filter = ({ searchTerm, setSearchTerm }) => (
+  <p>
+    filter shown with <input value={searchTerm} onChange={event => setSearchTerm(event.target.value)} />
+  </p>
 );
 
-// Component for the form to add a new person
-const PersonForm = ({ onSubmit, name, onNameChange, number, onNumberChange }) => (
-  <form onSubmit={onSubmit}>
+const Notification = ({ notification }) => {
+  if (!notification) {
+    return null;
+  }
+
+  const { message, type } = notification;
+  const notificationClass = type === 'error' ? 'error-notification' : 'notification';
+
+  return (
+    <div className={notificationClass}>
+      {message}
+    </div>
+  );
+};
+
+const PersonForm = ({ addName, newName, setNewName, newNumber, setNewNumber }) => (
+  <form onSubmit={addName}>
     <div>
-      {/* Input for the name */}
-      name: <input value={name} onChange={onNameChange} />
+      name: <input value={newName} onChange={event => setNewName(event.target.value)} />
     </div>
     <div>
-      {/* Input for the number */}
-      number: <input value={number} onChange={onNumberChange} />
+      number: <input value={newNumber} onChange={event => setNewNumber(event.target.value)} />
     </div>
     <div>
-      {/* Button to add a person */}
       <button type="submit">add</button>
     </div>
   </form>
 );
 
-// Component to display the list of persons
-const Persons = ({ persons, nameStyle, handleDelete }) => (
-  persons.map((person, index) => 
-    <p style={nameStyle} key={index}>
-      {/* Display name and number */}
-      {person.name} {person.number},
-      {/* Button to delete */}
-      <button onClick={() => handleDelete(person.id)}>Delete</button>
-    </p>
+const Person = ({ person, deletePerson }) => (
+  <p>
+    {person.name} {person.number}
+    <button onClick={() => deletePerson(person.id)}>delete</button>
+  </p>
+);
+
+const Persons = ({ persons, deletePerson }) => (
+  persons.map(person =>
+    <Person key={person.id} person={person} deletePerson={deletePerson} />
   )
 );
-// Main component of the application
-const App = () => {
-  // States used in the application
-  const [persons, setPersons] = useState([]); // State for the list of persons
-  const [newName, setNewName] = useState(''); // State for the new name
-  const [newNumber, setNewNumber] = useState(''); // State for the new number
-  const [search, setSearch] = useState(''); // State for the search string
 
-  // Loading initial phonebook data
+const App = () => {
+  const [persons, setPersons] = useState([]);
+  const [newName, setNewName] = useState('');
+  const [newNumber, setNewNumber] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [notification, setNotification] = useState(null);
+
+  const showNotification = (message, type = '') => {
+    setNotification({ message, type });
+    setTimeout(() => {
+      setNotification(null);
+    }, 5000);
+  };
+
   useEffect(() => {
-    getAll().then(initialPersons => {
-      // Update state with initial data
-      setPersons(initialPersons);
-    })
+    AxiosThings.getPersons()
+      .then(persons => setPersons(persons))
+      .catch(error => showNotification('Error fetching persons', 'error'));
   }, []);
 
-  // Handling name input change
-  const handleNameChange = (event) => {
-    // Update state with input value
-    setNewName(event.target.value);
-  };
-
-  // Handling number input change
-  const handleNumberChange = (event) => {
-    // Update state with input value
-    setNewNumber(event.target.value);
-  };
-
-  // Handling search string change
-  const handleSearchChange = (event) => {
-    // Update state with input value
-    setSearch(event.target.value);
-  };
-
-  // Adding a new person
   const addName = (event) => {
     event.preventDefault();
-    const existingPerson = persons.find(p => p.name === newName);
+
+    const existingPerson = persons.find(person => person.name === newName);
+
     if (existingPerson) {
-      if (window.confirm(`${newName} is already added to the phonebook. Replace the old number with a new one?`)) {
-        const updatedPersons = persons.map(p => p.name === newName ? { ...p, number: newNumber } : p);
-        updateNumber(existingPerson.id, newNumber, setPersons, updatedPersons);
+      const confirmUpdate = window.confirm(`${newName} is already added to phonebook, replace the old number with a new one?`);
+
+      if (confirmUpdate) {
+        const updatedPerson = { ...existingPerson, number: newNumber };
+
+        AxiosThings.updatePerson(existingPerson, updatedPerson)
+          .then(updatedPersonData => {
+            setPersons(persons.map(person => person.id !== existingPerson.id ? person : updatedPersonData));
+            setNewName('');
+            setNewNumber('');
+            showNotification(`Updated ${newName}`);
+          })
+          .catch(error => showNotification(`Error updating ${newName}`, 'error'));
       }
     } else {
-      const personObject = {
-        name: newName,
-        number: newNumber,
-      };
-      create(personObject, setPersons, setNewName, setNewNumber, persons); // Add the new person to the state
+      const newPerson = { name: newName, number: newNumber };
+
+      AxiosThings.createPerson(newPerson)
+        .then(createdPerson => {
+          setPersons(persons.concat(createdPerson));
+          setNewName('');
+          setNewNumber('');
+          showNotification(`Added ${newName}`);
+        })
+        .catch(error => showNotification(`Error adding ${newName}`, 'error'));
     }
   };
-  
-  // Filtering persons based on search string
-  const filteredPersons = persons.filter(person => person.name.toLowerCase().includes(search.toLowerCase()));
 
-  // Style for person names
-  const nameStyle = {
-    lineHeight: '0.3' // Modify style for person names
-  };
+  const filteredPersons = persons.filter(person =>
+    person.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-  // Handling person deletion
-  const handleDelete = (id) => {
+  const deletePerson = (id) => {
     const person = persons.find(p => p.id === id);
+
     if (window.confirm(`Delete ${person.name}?`)) {
-      deletePerson(id, setPersons, setNewName, setNewNumber, persons)
+      AxiosThings.deletePerson(id)
         .then(() => {
-          const updatedPersons = persons.filter(person => person.id !== id);
-          setPersons(updatedPersons);
-        });
+          setPersons(persons.filter(p => p.id !== id));
+          showNotification(`Deleted ${person.name}`);
+        })
+        .catch(error => showNotification(`Information of ${person.name} has already been removed from server`, 'error'));
     }
   };
 
-  // Rendering the user interface
   return (
     <div>
       <h2>Phonebook</h2>
-      {/* Filter component */}
-      <Filter value={search} onChange={handleSearchChange} />
+      <Notification notification={notification} />
+      <Filter searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
+
       <h3>Add a new</h3>
-      {/* PersonForm component */}
       <PersonForm
-        onSubmit={addName}
-        name={newName}
-        onNameChange={handleNameChange}
-        number={newNumber}
-        onNumberChange={handleNumberChange}
+        addName={addName}
+        newName={newName}
+        setNewName={setNewName}
+        newNumber={newNumber}
+        setNewNumber={setNewNumber}
       />
+
       <h3>Numbers</h3>
-      {/* Persons component */}
-      <Persons persons={filteredPersons} nameStyle={nameStyle} handleDelete={handleDelete} />
+      <Persons persons={filteredPersons} deletePerson={deletePerson} />
     </div>
   );
 };
 
-export default App; // Export the main component of the application
+export default App;
